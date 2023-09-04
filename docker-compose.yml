@@ -1,0 +1,87 @@
+version: '3'
+services:
+
+  next-app:
+    container_name: next-app
+    build:
+      context: ./source/my-app
+      dockerfile: Dockerfile.dev
+
+    # Set environment variables directly in the docker-compose file
+    environment:
+      ENV_VARIABLE: ${ENV_VARIABLE}
+      NEXT_PUBLIC_ENV_VARIABLE: ${NEXT_PUBLIC_ENV_VARIABLE}
+
+    # Set envrionment variables based on the .env file
+    env_file:
+      - .env
+    volumes:
+      - ./source/my-app:/app
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    networks:
+      app-network:
+        ipv4_address: 172.31.0.5
+
+  # #Nginx Service
+  # nginx:
+  #   build: ./nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/conf.d/:/etc/nginx/conf.d/
+  #   networks:
+  #     app-network:
+  #       ipv4_address: 172.31.0.2
+  #   links:
+  #     - next-app
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: unless-stopped
+    ports:
+      - 9001:80
+    environment:
+      PMA_ARBITRARY: 1
+      MYSQL_ROOT_PASSWORD: 1234 #(Required) set the password for the root superuser account.
+      PMA_HOST: db   # define the address/hostname of the mysql server eg mysql container name.
+      PMA_USER: root # this is the root user to login on startup
+      PMA_PASSWORD: 1234 # use the root password to login on startup.
+    networks:
+      app-network:
+        ipv4_address: 172.31.0.3
+  #MySQL Service
+  db:
+    image: mariadb:10.4.11
+    command: --skip-name-resolve
+    container_name: db
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: m2h_db
+      MYSQL_ROOT_PASSWORD: 1234
+    volumes:
+      - dbdata:/var/lib/mysql/
+      - ./mysql/my.cnf:/etc/mysql/my.cnf
+      - ./tmp/initdb.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      app-network:
+        ipv4_address: 172.31.0.4
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+          gateway: 172.31.0.1
+#Volumes
+volumes:
+  dbdata:
+    driver: local
