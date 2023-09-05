@@ -1,42 +1,33 @@
 version: '3'
 services:
 
-  next-app:
-    container_name: next-app
+  nextjs:
     build:
-      context: ./source/my-app
-      dockerfile: Dockerfile.dev
-
-    # Set environment variables directly in the docker-compose file
-    environment:
-      ENV_VARIABLE: ${ENV_VARIABLE}
-      NEXT_PUBLIC_ENV_VARIABLE: ${NEXT_PUBLIC_ENV_VARIABLE}
-
-    # Set envrionment variables based on the .env file
-    env_file:
-      - .env
-    volumes:
-      - ./source/my-app:/app
+      context: ./nextjs
     restart: unless-stopped
     ports:
-      - 3000:3000
+      - "3000:3000"
+    volumes:
+      - ./nextjs:/app
+    depends_on:
+      - db
     networks:
       app-network:
         ipv4_address: 172.31.0.5
-
-  # #Nginx Service
-  # nginx:
-  #   build: ./nginx
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx/conf.d/:/etc/nginx/conf.d/
-  #   networks:
-  #     app-network:
-  #       ipv4_address: 172.31.0.2
-  #   links:
-  #     - next-app
+  
+  nginx:
+    image: nginx:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - nextjs
+    networks:
+      app-network:
+        ipv4_address: 172.31.0.6
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
@@ -80,7 +71,6 @@ networks:
     ipam:
       config:
         - subnet: 172.31.0.0/24
-          gateway: 172.31.0.1
 #Volumes
 volumes:
   dbdata:
